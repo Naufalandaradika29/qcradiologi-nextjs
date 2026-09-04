@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { Activity, ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { getUserProfile } from "@/services/userService";
 
 export default function Home() {
   const router = useRouter();
-  const { firebaseUser, loading: authLoading } = useAuth();
+  const { firebaseUser, profile, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,8 +18,8 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && firebaseUser) router.replace("/dashboard");
-  }, [authLoading, firebaseUser, router]);
+    if (!authLoading && firebaseUser && profile) router.replace(profile.status === "pending" ? "/pending" : "/dashboard");
+  }, [authLoading, firebaseUser, profile, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +27,19 @@ export default function Home() {
     setSubmitting(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.replace("/dashboard");
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const profile = await getUserProfile(credential.user.uid);
+      if (!profile) {
+        await signOut(auth);
+        setMessage("Profil pengguna tidak ditemukan.");
+      } else if (profile.status === "pending") {
+        router.replace("/pending");
+      } else if (profile.status === "nonaktif") {
+        await signOut(auth);
+        setMessage("Akun Anda dinonaktifkan. Hubungi administrator.");
+      } else {
+        router.replace("/dashboard");
+      }
     } catch {
       setMessage("Email atau password belum sesuai. Silakan periksa kembali.");
     } finally {
@@ -99,6 +111,8 @@ export default function Home() {
               {!submitting ? <ArrowRight className="h-4 w-4" /> : null}
             </button>
           </form>
+
+          <p className="mt-6 text-center text-sm text-slate-500">Belum punya akun? <a href="/register" className="font-semibold text-[#2c7470] hover:underline">Daftar sebagai pegawai</a></p>
 
           <p className="mt-10 text-center text-xs leading-5 text-slate-400">Akses sistem diperuntukkan bagi petugas yang terdaftar.</p>
         </div>

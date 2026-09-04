@@ -12,7 +12,7 @@ export function ConfirmDialog({ open, title, message, onCancel, onConfirm }: { o
         <p className="mt-2 text-sm text-slate-600">{message}</p>
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onCancel}>Batal</Button>
-          <Button type="button" variant="danger" onClick={onConfirm}>Hapus</Button>
+          <Button type="button" variant="danger" onClick={onConfirm}>Konfirmasi</Button>
         </div>
       </div>
     </div>

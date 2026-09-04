@@ -1,12 +1,10 @@
 "use client";
 
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import type { AppUser } from "@/types/user";
-
-const ADMIN_EMAIL = "admin@qcradiologi.com";
 
 export function useAuth() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -35,30 +33,11 @@ export function useAuth() {
         const snapshot = await getDoc(userRef);
 
         if (!snapshot.exists()) {
-          if (user.email?.toLowerCase() === ADMIN_EMAIL) {
-            const adminProfile: AppUser = {
-              uid: currentUid,
-              nama: "Administrator",
-              email: user.email,
-              role: "admin",
-              nip: "",
-              bagian: "Administrator",
-              status: "aktif",
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            };
-
-            await setDoc(userRef, adminProfile, { merge: true });
-            setProfile(adminProfile);
-          } else {
-            setProfileError("Profil pengguna tidak ditemukan. Hubungi administrator untuk mengaktifkan akun.");
-          }
+          setProfileError("Profil pengguna tidak ditemukan.");
         } else {
           const data = snapshot.data() as Partial<AppUser>;
-          if (!data.nama || !data.email || !data.role || !data.status) {
+          if (!data.nama || !data.email || !data.role || !data.status || !data.uid) {
             setProfileError("Profil pengguna belum lengkap. Hubungi administrator.");
-          } else if (data.status !== "aktif") {
-            setProfileError("Akun pengguna sedang tidak aktif.");
           } else {
             setProfile({ ...data, uid: currentUid } as AppUser);
           }

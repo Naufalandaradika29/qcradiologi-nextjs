@@ -6,30 +6,40 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'aktif';
+    }
+
+    function isActiveUser() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'aktif';
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow create: if isSignedIn() && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.role == 'pegawai'
+        && request.resource.data.status == 'pending';
+      allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status);
       allow delete: if isAdmin();
     }
 
     match /alat/{document=**} {
-      allow read: if isSignedIn();
+      allow read: if isActiveUser();
       allow create, update, delete: if isAdmin();
     }
 
     match /kegiatan_qc/{document=**} {
-      allow read: if isSignedIn();
+      allow read: if isActiveUser();
       allow create, update, delete: if isAdmin();
     }
 
     match /pemeriksaan_qc/{document=**} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() && (resource.data.petugasUid == request.auth.uid || isAdmin());
+      allow read: if isActiveUser();
+      allow create: if isActiveUser();
+      allow update, delete: if isActiveUser() && (resource.data.petugasUid == request.auth.uid || isAdmin());
     }
 
     match /{document=**} {

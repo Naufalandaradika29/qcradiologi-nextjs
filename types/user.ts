@@ -1,5 +1,5 @@
 export type UserRole = "admin" | "pegawai";
-export type UserStatus = "aktif" | "nonaktif";
+export type UserStatus = "pending" | "aktif" | "nonaktif";
 
 export interface AppUser {
   uid: string;

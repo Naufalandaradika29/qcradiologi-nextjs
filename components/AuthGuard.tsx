@@ -1,19 +1,30 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
 import { useEffect } from "react";
 import { Loading } from "@/components/ui/Loading";
 import { useAuth } from "@/hooks/useAuth";
+import { auth } from "@/lib/firebase";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { firebaseUser, profile, profileError, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && !firebaseUser) {
       router.replace("/");
+    } else if (!loading && profile?.status === "pending" && pathname !== "/pending") {
+      router.replace("/pending");
+    } else if (!loading && profile?.status === "aktif" && pathname === "/pending") {
+      router.replace("/dashboard");
+    } else if (!loading && profile?.status === "nonaktif") {
+      void signOut(auth).finally(() => router.replace("/"));
+    } else if (!loading && profile?.role !== "admin" && pathname.startsWith("/admin")) {
+      router.replace("/dashboard");
     }
-  }, [loading, firebaseUser, router]);
+  }, [loading, firebaseUser, pathname, profile, router]);
 
   if (loading) {
     return <Loading label="Memeriksa sesi login..." />;
@@ -32,6 +43,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  if (profile.status !== "aktif" || (pathname.startsWith("/admin") && profile.role !== "admin")) {
+    return <Loading label={profile.status === "pending" ? "Menunggu persetujuan admin..." : "Memeriksa akses..."} />;
   }
 
   return <>{children}</>;
