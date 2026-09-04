@@ -14,12 +14,12 @@ export async function getUserProfile(uid: string): Promise<AppUser | null> {
   return { ...data, uid };
 }
 
-export async function createUserProfile(uid: string, data: Pick<AppUser, "nama" | "nip" | "bagian" | "email">) {
+export async function createUserProfile(uid: string, data: Pick<AppUser, "nama" | "email">) {
   await setDoc(doc(db, "users", uid), {
     uid,
     ...data,
     role: "pegawai",
-    status: "pending",
+    status: "aktif",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -30,15 +30,15 @@ export async function getUsers(): Promise<AppUser[]> {
   return snapshot.docs.map((item) => ({ ...(item.data() as AppUser), uid: item.id }));
 }
 
-export async function approveUser(uid: string) {
-  await updateDoc(doc(db, "users", uid), { status: "aktif", updatedAt: serverTimestamp() });
-}
-
 export async function disableUser(uid: string) {
   await updateDoc(doc(db, "users", uid), { status: "nonaktif", updatedAt: serverTimestamp() });
 }
 
-export async function updateUserProfile(uid: string, data: Pick<AppUser, "nama" | "nip" | "bagian">) {
+export async function enableUser(uid: string) {
+  await updateDoc(doc(db, "users", uid), { status: "aktif", updatedAt: serverTimestamp() });
+}
+
+export async function updateUserProfile(uid: string, data: Pick<AppUser, "nama">) {
   const ref = doc(db, "users", uid);
   await updateDoc(ref, {
     ...data,

@@ -18,7 +18,7 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && firebaseUser && profile) router.replace(profile.status === "pending" ? "/pending" : "/dashboard");
+    if (!authLoading && firebaseUser && profile) router.replace("/dashboard");
   }, [authLoading, firebaseUser, profile, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -32,8 +32,6 @@ export default function Home() {
       if (!profile) {
         await signOut(auth);
         setMessage("Profil pengguna tidak ditemukan.");
-      } else if (profile.status === "pending") {
-        router.replace("/pending");
       } else if (profile.status === "nonaktif") {
         await signOut(auth);
         setMessage("Akun Anda dinonaktifkan. Hubungi administrator.");

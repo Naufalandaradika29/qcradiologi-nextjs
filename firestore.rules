@@ -18,7 +18,8 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.auth.uid == userId
         && request.resource.data.uid == userId
         && request.resource.data.role == 'pegawai'
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == 'aktif'
+        && request.resource.data.email == request.auth.token.email;
       allow update: if isAdmin() || (isSignedIn() && request.auth.uid == userId
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.role == resource.data.role

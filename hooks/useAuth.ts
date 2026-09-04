@@ -36,7 +36,7 @@ export function useAuth() {
           setProfileError("Profil pengguna tidak ditemukan.");
         } else {
           const data = snapshot.data() as Partial<AppUser>;
-          if (!data.nama || !data.email || !data.role || !data.status || !data.uid) {
+          if (!data.nama || !data.email || !data.role || !data.status) {
             setProfileError("Profil pengguna belum lengkap. Hubungi administrator.");
           } else {
             setProfile({ ...data, uid: currentUid } as AppUser);

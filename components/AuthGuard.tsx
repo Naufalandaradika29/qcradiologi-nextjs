@@ -15,10 +15,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && !firebaseUser) {
       router.replace("/");
-    } else if (!loading && profile?.status === "pending" && pathname !== "/pending") {
-      router.replace("/pending");
-    } else if (!loading && profile?.status === "aktif" && pathname === "/pending") {
-      router.replace("/dashboard");
     } else if (!loading && profile?.status === "nonaktif") {
       void signOut(auth).finally(() => router.replace("/"));
     } else if (!loading && profile?.role !== "admin" && pathname.startsWith("/admin")) {
@@ -46,7 +42,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (profile.status !== "aktif" || (pathname.startsWith("/admin") && profile.role !== "admin")) {
-    return <Loading label={profile.status === "pending" ? "Menunggu persetujuan admin..." : "Memeriksa akses..."} />;
+    return <Loading label="Memeriksa akses..." />;
   }
 
   return <>{children}</>;
