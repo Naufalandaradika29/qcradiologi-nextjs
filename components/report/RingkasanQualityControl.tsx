@@ -10,7 +10,7 @@ import { Loading } from "@/components/ui/Loading";
 import { useAuth } from "@/hooks/useAuth";
 import type { PemeriksaanQC } from "@/types/pemeriksaan";
 
-export default function DashboardPage() {
+export function RingkasanQualityControl({ title = "Ringkasan Quality Control" }: { title?: string }) {
   const { profile, loading: authLoading, profileError } = useAuth();
   const [loading, setLoading] = useState(true);
   const [pemeriksaan, setPemeriksaan] = useState<PemeriksaanQC[]>([]);
@@ -33,45 +33,41 @@ export default function DashboardPage() {
         setAlatCount(alatSnap.size);
         setKegiatanCount(kegiatanSnap.size);
         setPemeriksaan(pemeriksaanSnap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as PemeriksaanQC) })));
-      } catch (error) {
-        console.error("Dashboard load failed:", error);
-        setError(error instanceof Error ? error.message : "Data dashboard gagal dibaca dari Firestore.");
+      } catch (loadError) {
+        console.error("Dashboard load failed:", loadError);
+        setError(loadError instanceof Error ? loadError.message : "Data dashboard gagal dibaca dari Firestore.");
       } finally {
         setLoading(false);
       }
     }
 
     if (!authLoading && profile) {
-      loadData();
+      void loadData();
     }
   }, [authLoading, profile]);
 
   const stats = useMemo(() => {
     const total = pemeriksaan.length;
-    const lulus = pemeriksaan.filter((item) => item.hasil === "lulus").length;
-    const tidakLulus = pemeriksaan.filter((item) => item.hasil === "tidak_lulus").length;
+    const lulus = pemeriksaan.filter((item) => normalizeResultValue(item.hasil) === "✓").length;
+    const tidakLulus = pemeriksaan.filter((item) => normalizeResultValue(item.hasil) === "✕").length;
 
-    return {
-      total,
-      lulus,
-      tidakLulus,
-    };
+    return { total, lulus, tidakLulus };
   }, [pemeriksaan]);
 
   if (authLoading || loading || !profile) {
     return (
       <AuthGuard>
-        <Loading label="Memuat dashboard..." />
+        <Loading label="Memuat ringkasan quality control..." />
       </AuthGuard>
     );
   }
 
   return (
     <AuthGuard>
-      <AppLayout user={profile} title="Ringkasan Quality Control">
+      <AppLayout user={profile} title={title}>
         <div className="space-y-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h1 className="text-2xl font-bold text-slate-900">Ringkasan Quality Control</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
             <p className="mt-1 text-sm text-slate-500">Ringkasan quality control radiologi.</p>
           </div>
 
@@ -83,6 +79,7 @@ export default function DashboardPage() {
             <StatCard label="QC Tidak Lulus / Perlu Tindakan" value={String(stats.tidakLulus)} tone="danger" />
           </div>
 
+          {profileError ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">Profil: {profileError}</div> : null}
           {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">Firestore: {error}</div> : null}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -111,7 +108,9 @@ export default function DashboardPage() {
                         <td className="px-3 py-3">{item.alatNama}</td>
                         <td className="px-3 py-3">{item.kegiatanNama}</td>
                         <td className="px-3 py-3">{item.petugasNama}</td>
-                        <td className="px-3 py-3">{normalizeResultValue(item.hasil)}</td>
+                        <td className="px-3 py-3">
+                          <span className="text-lg font-bold text-slate-700">{normalizeResultValue(item.hasil)}</span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

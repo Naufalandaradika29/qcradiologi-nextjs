@@ -6,11 +6,16 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'aktif';
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'aktif';
     }
 
     function isActiveUser() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'aktif';
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'aktif';
     }
 
     match /users/{userId} {
@@ -38,6 +43,12 @@ service cloud.firestore {
     }
 
     match /pemeriksaan_qc/{document=**} {
+      allow read: if isActiveUser();
+      allow create: if isActiveUser();
+      allow update, delete: if isActiveUser() && (resource.data.petugasUid == request.auth.uid || isAdmin());
+    }
+
+    match /suhu_ruangan/{document=**} {
       allow read: if isActiveUser();
       allow create: if isActiveUser();
       allow update, delete: if isActiveUser() && (resource.data.petugasUid == request.auth.uid || isAdmin());

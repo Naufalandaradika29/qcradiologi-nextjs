@@ -2,32 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, LayoutDashboard, ClipboardCheck, BarChart3, Wrench, ClipboardList, Users, Activity, FolderKanban } from "lucide-react";
+import { LogOut, ClipboardCheck, BarChart3, Wrench, Users, FolderKanban, Thermometer, MonitorCheck, FileText } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import type { AppUser } from "@/types/user";
 
-const sidebarMenu = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Pemeriksaan QC", href: "/qc", icon: ClipboardCheck },
-  { label: "Rekap Harian", href: "/rekap/harian", icon: BarChart3 },
-  { label: "Rekap Mingguan", href: "/rekap/mingguan", icon: BarChart3 },
-  { label: "Rekap Bulanan", href: "/rekap/bulanan", icon: BarChart3 },
-  { label: "Rekap Tahunan", href: "/rekap/tahunan", icon: BarChart3 },
-  { label: "Data Alat", href: "/admin/alat", icon: Wrench },
-  { label: "Kegiatan QC", href: "/admin/kegiatan", icon: ClipboardList },
-  { label: "Data Pegawai", href: "/admin/pegawai", icon: Users },
-];
-
 export function Sidebar({ user }: { user: AppUser | null }) {
   const pathname = usePathname();
   const isAdmin = user?.role === "admin";
-
-  const showItem = (href: string) => {
-    if (href.startsWith("/admin") && !isAdmin) return false;
-    if (href.startsWith("/rekap") && !user) return false;
-    return true;
-  };
 
   const handleLogout = async () => {
     try {
@@ -48,7 +30,7 @@ export function Sidebar({ user }: { user: AppUser | null }) {
         <div>
           <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Menu Utama</p>
           <div className="space-y-1">
-            <NavLink href="/dashboard" label="Dashboard" icon={LayoutDashboard} active={pathname === "/dashboard"} />
+            <NavLink href="/alat" label="Alat" icon={MonitorCheck} active={pathname.startsWith("/alat")} />
           </div>
         </div>
 
@@ -56,20 +38,18 @@ export function Sidebar({ user }: { user: AppUser | null }) {
           <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Quality Control</p>
           <div className="space-y-1">
             <NavLink href="/qc" label="Pemeriksaan QC" icon={ClipboardCheck} active={pathname === "/qc"} />
+            <NavLink href="/suhu-ruangan" label="Suhu Ruangan" icon={Thermometer} active={pathname.startsWith("/suhu-ruangan")} />
           </div>
         </div>
 
         <div>
-          <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Rekapitulasi</p>
+          <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Report</p>
           <div className="space-y-1">
-            {[
-              ["/rekap/harian", "Rekap Harian"],
-              ["/rekap/mingguan", "Rekap Mingguan"],
-              ["/rekap/bulanan", "Rekap Bulanan"],
-              ["/rekap/tahunan", "Rekap Tahunan"],
-            ].map(([href, label]) => (
-              <NavLink key={href} href={href} label={label} icon={BarChart3} active={pathname === href} />
-            ))}
+            <NavLink href="/report/harian" label="Harian" icon={BarChart3} active={pathname === "/report/harian"} />
+            <NavLink href="/report/mingguan" label="Mingguan" icon={BarChart3} active={pathname === "/report/mingguan"} />
+            <NavLink href="/report/bulanan" label="Bulanan" icon={BarChart3} active={pathname === "/report/bulanan"} />
+            <NavLink href="/report/tahunan" label="Tahunan" icon={BarChart3} active={pathname === "/report/tahunan"} />
+            <NavLink href="/report/ringkasan" label="Ringkasan Quality Control" icon={FileText} active={pathname === "/report/ringkasan"} />
           </div>
         </div>
 
@@ -100,7 +80,7 @@ export function Sidebar({ user }: { user: AppUser | null }) {
   );
 }
 
-function NavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof LayoutDashboard; active: boolean }) {
+function NavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; active: boolean }) {
   return (
     <Link
       href={href}

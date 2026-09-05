@@ -18,7 +18,7 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && firebaseUser && profile) router.replace("/dashboard");
+    if (!authLoading && firebaseUser && profile) router.replace("/alat");
   }, [authLoading, firebaseUser, profile, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -36,7 +36,7 @@ export default function Home() {
         await signOut(auth);
         setMessage("Akun Anda dinonaktifkan. Hubungi administrator.");
       } else {
-        router.replace("/dashboard");
+        router.replace("/alat");
       }
     } catch {
       setMessage("Email atau password belum sesuai. Silakan periksa kembali.");
@@ -105,7 +105,7 @@ export default function Home() {
             {message ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{message}</p> : null}
 
             <button type="submit" disabled={submitting} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#123b3b] px-5 text-sm font-semibold text-white shadow-lg shadow-[#123b3b]/15 transition hover:bg-[#1b5150] disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting ? "Memeriksa akun..." : "Masuk ke dashboard"}
+              {submitting ? "Memeriksa akun..." : "Masuk ke alat"}
               {!submitting ? <ArrowRight className="h-4 w-4" /> : null}
             </button>
           </form>

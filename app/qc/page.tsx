@@ -76,7 +76,7 @@ export default function QcPage() {
         [row.alatNama, row.kegiatanNama, row.petugasNama, row.catatan].some((value) =>
           value?.toLowerCase().includes(search.toLowerCase()),
         );
-      const matchesStatus = statusFilter === "all" || row.hasil === statusFilter;
+      const matchesStatus = statusFilter === "all" || normalizeHasil(row.hasil) === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [pemeriksaanList, search, statusFilter]);
@@ -275,9 +275,9 @@ export default function QcPage() {
               <div className="flex flex-col gap-2 md:flex-row">
                 <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari alat, kegiatan, petugas" className="md:w-60" />
                 <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="md:w-40">
-                  <option value="all">Semua status</option>
-                  <option value="lulus">Lulus</option>
-                  <option value="tidak_lulus">Tidak Lulus</option>
+                  <option value="all">Semua Hasil</option>
+                  <option value="baik">✓</option>
+                  <option value="tidak_baik">✕</option>
                 </Select>
               </div>
             </div>
@@ -307,12 +307,10 @@ export default function QcPage() {
                         <td className="px-3 py-3">{item.alatNama}</td>
                         <td className="px-3 py-3">{item.kegiatanNama}</td>
                         <td className="px-3 py-3">
-                          {String(item.nilai)} {item.satuan}
+                          {displayValue(item.nilai)} {displayValue(item.satuan)}
                         </td>
                         <td className="px-3 py-3">
-                          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${item.hasil === "lulus" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-                            {item.hasil === "lulus" ? "Lulus" : "Tidak Lulus"}
-                          </span>
+                          <HasilIcon hasil={normalizeHasil(item.hasil)} />
                         </td>
                         <td className="px-3 py-3">{item.catatan || "-"}</td>
                         <td className="px-3 py-3">
@@ -343,4 +341,42 @@ function formatDate(value: unknown) {
   if (value instanceof Timestamp) return value.toDate().toLocaleDateString("id-ID");
   if (typeof value === "string") return new Date(value).toLocaleDateString("id-ID");
   return new Date(String(value)).toLocaleDateString("id-ID");
+}
+
+type NormalizedHasil = "baik" | "tidak_baik" | "tidak_diketahui";
+
+function normalizeHasil(value: unknown): NormalizedHasil {
+  if (typeof value === "boolean") return value ? "baik" : "tidak_baik";
+  if (typeof value !== "string") return "tidak_diketahui";
+
+  const normalized = value.trim().toLowerCase();
+  if (["lulus", "ok", "baik", "true", "✓"].includes(normalized)) return "baik";
+  if (["tidak lulus", "tidak_lulus", "tidak baik", "tidak_baik", "false", "✕"].includes(normalized)) return "tidak_baik";
+  return "tidak_diketahui";
+}
+
+function displayValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "number" && Number.isNaN(value)) return "-";
+  return String(value);
+}
+
+function HasilIcon({ hasil }: { hasil: NormalizedHasil }) {
+  if (hasil === "baik") {
+    return (
+      <span aria-label="Hasil baik" title="Hasil baik" className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-base font-bold text-emerald-700">
+        ✓
+      </span>
+    );
+  }
+
+  if (hasil === "tidak_baik") {
+    return (
+      <span aria-label="Hasil tidak baik" title="Hasil tidak baik" className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-100 text-base font-bold text-rose-700">
+        ✕
+      </span>
+    );
+  }
+
+  return <span aria-label="Hasil tidak tersedia" title="Hasil tidak tersedia">-</span>;
 }

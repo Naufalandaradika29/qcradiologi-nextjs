@@ -37,7 +37,7 @@ export default function RegisterPage() {
     try {
       const credential = await createUserWithEmailAndPassword(auth, form.email.trim().toLowerCase(), form.password);
       await createUserProfile(credential.user.uid, { nama: form.nama.trim(), email: form.email.trim().toLowerCase() });
-      router.replace("/dashboard");
+      router.replace("/alat");
     } catch (registrationError) {
       setError(getRegisterError(registrationError));
     } finally {

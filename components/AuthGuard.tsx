@@ -18,7 +18,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     } else if (!loading && profile?.status === "nonaktif") {
       void signOut(auth).finally(() => router.replace("/"));
     } else if (!loading && profile?.role !== "admin" && pathname.startsWith("/admin")) {
-      router.replace("/dashboard");
+      router.replace("/alat");
     }
   }, [loading, firebaseUser, pathname, profile, router]);
 
