@@ -73,9 +73,15 @@ export const QC_TOOL_DEFINITIONS: QcChecklistDefinition[] = [
   {
     slug: "mobile-xray",
     namaAlat: "Mobile X-Ray",
-    checklist: [],
-    emptyStateTitle: "Checklist QC Mobile X-Ray belum tersedia.",
-    emptyStateDescription: "Data kegiatan QC Mobile X-Ray perlu ditambahkan oleh administrator.",
+    checklist: [
+      { nomor: 1, kategori: "Cek Pesawat", kegiatan: "Pesawat ON", parameter: "Lampu Indikator Nyala" },
+      { nomor: 2, kategori: "Cek Pesawat", kegiatan: "Cek Parameter KV", parameter: "Display akan tampil angka" },
+      { nomor: 3, kategori: "Cek Pesawat", kegiatan: "Cek Parameter mAs", parameter: "Display akan tampil angka" },
+      { nomor: 4, kategori: "Cek Pesawat", kegiatan: "Cek Kolimasi/diagframa", parameter: "Dapat di buka tutup" },
+      { nomor: 5, kategori: "Cek Pesawat", kegiatan: "Rotasi Tube", parameter: "Dapat di gerakan" },
+      { nomor: 6, kategori: "Warming Up Pesawat", kegiatan: "Lakukan Pemanasan tube", parameter: "Lakukan tes tube tekan tombol expos sebanyak 3 x" },
+      { nomor: 7, kategori: "Warming Up Pesawat", kegiatan: "Lakukan dengan kondisi berbeda", parameter: "-" },
+    ],
   },
 ];
 

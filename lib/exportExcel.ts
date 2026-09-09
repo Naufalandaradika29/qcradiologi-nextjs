@@ -4,7 +4,7 @@ function triggerDownload(workbook: XLSX.WorkBook, filename: string) {
   XLSX.writeFile(workbook, filename);
 }
 
-export function exportQcDailyExcel({ alatName, tanggal, rows }: { alatName: string; tanggal: string; rows: Array<{ nomor: number; kegiatan: string; parameter: string; hasil: string }> }) {
+export function exportQcDailyExcel({ alatName, tanggal, rows, catatan, petugas }: { alatName: string; tanggal: string; rows: Array<{ nomor: number; kegiatan: string; parameter: string; hasil: string }>; catatan?: string; petugas?: string }) {
   const data = [
     ["PELAKSANAAN HARIAN QUALITY CONTROL"],
     ["Bagian Radiologi RS PERMATA PAMULANG"],
@@ -12,7 +12,8 @@ export function exportQcDailyExcel({ alatName, tanggal, rows }: { alatName: stri
     ["Tanggal", tanggal],
     [],
     ["No", "Kegiatan", "Parameter", "Status"],
-    ...rows.map((row) => [row.nomor, row.kegiatan, row.parameter, row.hasil === "baik" ? "√" : "X"]),
+    ...rows.map((row) => [row.nomor, row.kegiatan, row.parameter, row.hasil === "baik" ? "√" : row.hasil === "tidak_baik" ? "X" : ""]),
+    ...(catatan !== undefined || petugas !== undefined ? [[], ["Paraf / Petugas", petugas || "-"], [], ["Keterangan", catatan || "-"]] : []),
   ];
 
   const sheet = XLSX.utils.aoa_to_sheet(data);
@@ -21,13 +22,16 @@ export function exportQcDailyExcel({ alatName, tanggal, rows }: { alatName: stri
   triggerDownload(workbook, `qc-${alatName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${tanggal}.xlsx`);
 }
 
-export function exportQcMonthlyExcel({ alatName, bulan, rows }: { alatName: string; bulan: string; rows: Array<{ nomor: number; kegiatan: string; parameter: string; hasil: Record<string, string> }> }) {
+export function exportQcMonthlyExcel({ alatName, bulan, rows, catatan, petugas }: { alatName: string; bulan: string; rows: Array<{ nomor: number; kegiatan: string; parameter: string; hasil: Record<string, string> }>; catatan?: string; petugas?: string }) {
   const headers = ["No", "Kegiatan", "Parameter", ...Array.from({ length: 31 }, (_, index) => String(index + 1))];
   const data = rows.map((row) => [
     row.nomor,
     row.kegiatan,
     row.parameter,
-    ...Array.from({ length: 31 }, (_, index) => row.hasil[String(index + 1)] ?? ""),
+    ...Array.from({ length: 31 }, (_, index) => {
+      const hasil = row.hasil[String(index + 1)] ?? "";
+      return hasil === "baik" ? "√" : hasil === "tidak_baik" ? "X" : hasil;
+    }),
   ]);
 
   const sheet = XLSX.utils.aoa_to_sheet([
@@ -39,7 +43,8 @@ export function exportQcMonthlyExcel({ alatName, bulan, rows }: { alatName: stri
     headers,
     ...data,
     [],
-    ["Keterangan"],
+    ["Keterangan", catatan || "-"],
+    ...(petugas !== undefined ? [["Paraf / Petugas", petugas || "-"]] : []),
   ]);
 
   const workbook = XLSX.utils.book_new();

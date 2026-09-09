@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { QC_TOOL_DEFINITIONS, buildQcStatusSummary, saveQcRecord } from "@/services/qcService";
 import { exportQcDailyExcel, exportQcMonthlyExcel } from "@/lib/exportExcel";
 import { StatusBadge } from "@/components/report/ReportPage";
-import type { QcStatus } from "@/types/qc";
+import type { QcAnswer, QcRecord, QcStatus } from "@/types/qc";
 import { useParams } from "next/navigation";
 
 export default function AlatDetailPage() {
@@ -23,10 +23,11 @@ export default function AlatDetailPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [answers, setAnswers] = useState<Record<number, QcStatus>>({});
   const [catatan, setCatatan] = useState("");
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<Array<QcRecord & { id: string }>>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadHistory() {
@@ -34,13 +35,21 @@ export default function AlatDetailPage() {
       const snapshot = await getDocs(
         query(collection(db, "pemeriksaan_qc"), where("alatSlug", "==", slug), orderBy("tanggal", "desc")),
       );
-      setHistory(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+      setHistory(snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as QcRecord & { id: string })));
     }
 
     if (!authLoading && profile && slug) {
       void loadHistory();
     }
   }, [authLoading, profile, slug]);
+
+  const checklist = tool?.checklist ?? [];
+  const isMobileXray = tool?.slug === "mobile-xray";
+
+  const historyForTool = useMemo(
+    () => history.filter((row) => row.alatSlug === slug).sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal))),
+    [history, slug],
+  );
 
   if (!tool) {
     return (
@@ -52,15 +61,10 @@ export default function AlatDetailPage() {
     );
   }
 
-  const checklist = tool.checklist;
-
-  const historyForTool = useMemo(
-    () => history.filter((row) => row.alatSlug === slug).sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal))),
-    [history, slug],
-  );
-
   const summary = buildQcStatusSummary(
-    checklist.map((item) => ({ hasil: answers[item.nomor] ?? "baik" })),
+    checklist
+      .filter((item) => !isMobileXray || typeof answers[item.nomor] !== "undefined")
+      .map((item) => ({ hasil: answers[item.nomor] ?? "baik" })),
   );
 
   const handleAnswer = (nomor: number, value: QcStatus) => {
@@ -75,7 +79,7 @@ export default function AlatDetailPage() {
 
     const answered = checklist.filter((item) => typeof answers[item.nomor] !== "undefined");
     if (answered.length !== checklist.length) {
-      setError("Semua item checklist harus diberikan status BAIK atau TIDAK BAIK.");
+      setError(isMobileXray ? "Terdapat item QC yang belum diperiksa." : "Semua item checklist harus diberikan status BAIK atau TIDAK BAIK.");
       return;
     }
 
@@ -108,14 +112,14 @@ export default function AlatDetailPage() {
         })),
       };
 
-      await saveQcRecord(payload as any);
+      await saveQcRecord(payload as Parameters<typeof saveQcRecord>[0]);
       setMessage("Data QC berhasil disimpan ke Firestore.");
       setCatatan("");
       setAnswers({});
       const updated = await getDocs(
         query(collection(db, "pemeriksaan_qc"), where("alatSlug", "==", slug), orderBy("tanggal", "desc")),
       );
-      setHistory(updated.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
+      setHistory(updated.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as QcRecord & { id: string })));
     } catch (saveError) {
       console.error("Save QC failed:", saveError);
       setError("Gagal menyimpan data QC. Silakan coba lagi.");
@@ -129,9 +133,9 @@ export default function AlatDetailPage() {
       nomor: item.nomor,
       kegiatan: item.kegiatan,
       parameter: item.parameter,
-      hasil: answers[item.nomor] ?? "baik",
+      hasil: answers[item.nomor] ?? "",
     }));
-    exportQcDailyExcel({ alatName: tool.namaAlat, tanggal: selectedDate, rows });
+    exportQcDailyExcel({ alatName: tool.namaAlat, tanggal: selectedDate, rows, ...(isMobileXray ? { catatan: catatan.trim(), petugas: profile?.nama } : {}) });
   };
 
   const handleExportMonthly = () => {
@@ -141,7 +145,7 @@ export default function AlatDetailPage() {
       const record = historyForTool.find((row) => row.tanggal === dateKey);
       const hasil: Record<string, string> = {};
       if (record?.answers) {
-        record.answers.forEach((answer: any) => {
+          record.answers.forEach((answer: QcAnswer) => {
           hasil[String(answer.nomor)] = answer.hasil;
         });
       }
@@ -155,13 +159,13 @@ export default function AlatDetailPage() {
       hasil: Object.fromEntries(
         rowsByDate.map(({ day }) => {
           const record = historyForTool.find((row) => row.tanggal === `${monthKey}-${String(day).padStart(2, "0")}`);
-          const answer = record?.answers?.find((entry: any) => entry.nomor === item.nomor);
+          const answer = record?.answers?.find((entry: QcAnswer) => entry.nomor === item.nomor);
           return [String(day), answer?.hasil ?? ""];
         }),
       ),
     }));
 
-    exportQcMonthlyExcel({ alatName: tool.namaAlat, bulan: monthKey, rows: exportRows });
+    exportQcMonthlyExcel({ alatName: tool.namaAlat, bulan: monthKey, rows: exportRows, ...(isMobileXray ? { catatan: historyForTool.find((row) => row.catatan)?.catatan, petugas: historyForTool.find((row) => row.petugasNama)?.petugasNama } : {}) });
   };
 
   return (
@@ -171,8 +175,9 @@ export default function AlatDetailPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">{tool.namaAlat}</h1>
-                <p className="mt-1 text-sm text-slate-500">Form QC alat berdasarkan checklist referensi Excel yang tersedia.</p>
+                <h1 className="text-2xl font-bold text-slate-900">{isMobileXray ? "PELAKSANAAN HARIAN QUALITY CONTROL" : tool.namaAlat}</h1>
+                <p className="mt-1 text-sm text-slate-500">{isMobileXray ? "Bagian Radiologi RS PERMATA PAMULANG" : "Form QC alat berdasarkan checklist referensi Excel yang tersedia."}</p>
+                {isMobileXray ? <p className="mt-1 text-sm font-semibold text-slate-700">Nama Alat: Mobile X-Ray</p> : null}
               </div>
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" onClick={handleExportDaily}>Export Harian</Button>
@@ -292,10 +297,34 @@ export default function AlatDetailPage() {
                       <div key={row.id} className="rounded-lg border border-slate-100 bg-slate-50 p-2 text-xs text-slate-600">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-semibold text-slate-700">{row.tanggal}</span>
-                          <StatusBadge status={row.statusKeseluruhan ?? "baik"} />
+                          {isMobileXray ? (
+                            <span className={row.statusKeseluruhan === "baik" ? "font-bold text-emerald-600" : "font-bold text-rose-600"}>
+                              {row.statusKeseluruhan === "baik" ? "✓" : "✕"}
+                            </span>
+                          ) : <StatusBadge status={row.statusKeseluruhan ?? "baik"} />}
                         </div>
-                        <div className="mt-1">Petugas: {row.petugasNama}</div>
-                        <div>Baik: {row.jumlahBaik ?? 0} | Tidak Baik: {row.jumlahTidakBaik ?? 0}</div>
+                        <div className="mt-1">Tanggal: {row.tanggal}</div>
+                        <div>Petugas: {row.petugasNama || "-"}</div>
+                        {isMobileXray ? <div>Catatan: {row.catatan || "-"}</div> : <div>Baik: {row.jumlahBaik ?? 0} | Tidak Baik: {row.jumlahTidakBaik ?? 0}</div>}
+                        {isMobileXray ? (
+                          <button
+                            type="button"
+                            className="mt-2 font-semibold text-sky-700 hover:text-sky-900"
+                            onClick={() => setExpandedHistoryId((current) => current === row.id ? null : row.id)}
+                          >
+                            {expandedHistoryId === row.id ? "Tutup detail" : "Lihat detail"}
+                          </button>
+                        ) : null}
+                        {isMobileXray && expandedHistoryId === row.id ? (
+                          <div className="mt-2 space-y-1 border-t border-slate-200 pt-2">
+                            {(row.answers ?? []).map((answer: QcAnswer) => (
+                              <div key={answer.nomor} className="flex justify-between gap-3">
+                                <span>{answer.nomor}. {answer.kegiatan}</span>
+                                <span className={answer.hasil === "baik" ? "font-bold text-emerald-600" : "font-bold text-rose-600"}>{answer.hasil === "baik" ? "✓" : answer.hasil === "tidak_baik" ? "✕" : "-"}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     ))}
                   </div>
